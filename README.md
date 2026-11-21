@@ -17,63 +17,13 @@ dotnet test ../ryvo-interview-be.Tests
 The SQLite file (`ryvo.db`) is created from the initial migration on first run
 and seeded with dev users, engagements and timesheet weeks. Delete it to reset.
 
-### Domain layout
-
-```
-Domain/
-  Aggregates/    User, Engagement, TimesheetWeek (+ TimeEntry), Invoice (+ InvoiceLineItem)
-  ValueObjects/  Money, TimeRange, WeekBoundary
-  Enums/         UserRole, TimesheetStatus
-  Services/      InvoiceGenerator
-  Exceptions/    DomainException and its specific subclasses
-```
-
-Every file declares the single `ryvo_interview_be.Domain` namespace (exceptions
-live in `.Exceptions`). The folders are organisational only, so callers need one
-`using ryvo_interview_be.Domain;` regardless of which folder a type sits in.
-`TimeEntry` and `InvoiceLineItem` are entities/value objects *inside* their
-aggregate, so they travel with their root rather than having their own files.
-
-### CSV exports
-
-Two download endpoints, both `text/csv; charset=utf-8` and `Content-Disposition:
-attachment`:
-
-```
-GET /api/engagements/{engagementId}/weeks/{weekOf}/entries/csv
-GET /api/clients/invoices/{invoiceId}/csv
-```
-
-Invoice CSV — one row per line item, client-local work dates, then a `TOTAL` row
-(machines should prefer the JSON invoice):
-
-```csv
-Contractor,Work Date (Client Local),Approved Hours,Hourly Rate (USD),Line Total (USD)
-Budi Santoso,2026-11-16,8.00,75.00,600.00
-Budi Santoso,2026-11-17,8.00,75.00,600.00
-Budi Santoso,2026-11-18,4.00,75.00,300.00
-TOTAL,,20.00,,1500.00
-```
-
-Timesheet CSV — one row per entry, chronological, contractor-local with offset:
-
-```csv
-Start (Contractor Local),End (Contractor Local),Hours,Description
-2026-11-16T13:00:00+07:00,2026-11-16T21:00:00+07:00,8.00,Design review
-```
-
-Format guarantees, all covered by `CsvExportTests`:
-
-- **Invariant numbers.** Hours and money always use `.` as the decimal separator,
-  even when the server culture is `id-ID` (where `3.5m` normally renders as
-  `3,5` and would silently corrupt every row).
-- **RFC 4180 escaping.** Values containing a comma, quote, CR, LF or leading /
-  trailing space are quoted, and embedded quotes are doubled.
-- **CRLF line endings, UTF-8 without a BOM.** A BOM would become part of the
-  first header cell for naive parsers; add one only if Excel mangles non-ASCII
-  names.
-- **ASCII-only filenames**, e.g. `invoice-acme-corp-2026-11-16-to-2026-11-30.csv`,
-  so `Content-Disposition` never depends on header encoding.
+# AI usage in this interview
+- Minimal API and Swagger bootstrapping
+- Edge cases in unit test
+- Setting up EF Core and SQLite for persistence and making sure SQLite supports DateTimeOffset (It does not support it natively, we require workarounds)
+- App structure and tidying by putting aggregates in aggregates, valueobjects in valueobjects etc
+- Set git .gitignore, making sure no credentials, .envs and setting line endings CLRF / LF issue for linux and windows box
+- Bootstrapping the FE using nextjs app router with shadcn
 
 ---
 
