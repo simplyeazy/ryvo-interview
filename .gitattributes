@@ -1,0 +1,31 @@
+# Line endings: normalise everything to LF in the repository *and* on checkout.
+#
+# `text=auto` alone only normalises what gets stored; each checkout then gets its
+# native ending, so a Windows clone produces CRLF. That breaks shell scripts,
+# Dockerfiles and Makefiles when the same tree is later used in Linux or WSL.
+# Pinning eol=lf also overrides the reviewer's core.autocrlf, so every machine
+# gets byte-identical working trees.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF, because some shells require it there.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Never diff, merge or convert binary content.
+*.db     binary
+*.db-shm binary
+*.db-wal binary
+*.sqlite binary
+*.ico    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.pdf    binary
+*.zip    binary

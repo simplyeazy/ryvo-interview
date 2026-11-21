@@ -1,0 +1,60 @@
+# =============================================================================
+# Ryvo Timesheets monorepo
+#
+# Rule of thumb: build output, local databases and editor state stay out of git.
+# Nothing here should ever hold a credential. No .env file is committed; if one
+# is added locally, `.env.example` is the only env file that should be tracked.
+# =============================================================================
+
+# --- Secrets and local config ------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+appsettings.*.local.json
+
+# --- Local SQLite database (created and seeded from migrations on first run) --
+ryvo.db
+ryvo.db-shm
+ryvo.db-wal
+
+# --- .NET --------------------------------------------------------------------
+bin/
+obj/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+coverage/
+*.user
+*.suo
+*.userosscache
+.vs/
+
+# --- Node / Next.js ----------------------------------------------------------
+node_modules/
+.next/
+out/
+build/
+.turbo/
+.vercel/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Editors and OS ----------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs --------------------------------------------------------------------
+*.log
+logs/

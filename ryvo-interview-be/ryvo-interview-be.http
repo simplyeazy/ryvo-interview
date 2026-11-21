@@ -1,0 +1,137 @@
+@host = http://localhost:5098
+
+# Seeded dev users (fixed ids)
+@acme = 11111111-1111-1111-1111-111111111111
+@globex = 44444444-4444-4444-4444-444444444444
+@budi = 22222222-2222-2222-2222-222222222222
+@siti = 33333333-3333-3333-3333-333333333333
+
+# Seeded engagements
+@acmeBudi = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+@acmeSiti = bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+@globexSiti = cccccccc-cccc-cccc-cccc-cccccccccccc
+
+# Swagger
+GET {{host}}/swagger/v1/swagger.json
+Accept: application/json
+
+###
+
+# --- Dev login / identity ---------------------------------------------
+
+GET {{host}}/api/dev/users
+
+###
+
+GET {{host}}/api/dev/engagements
+
+###
+
+# Sets the dev_user cookie; the X-User-Id header works too.
+POST {{host}}/api/dev/login/{{budi}}
+
+###
+
+GET {{host}}/api/me
+X-User-Id: {{budi}}
+
+###
+
+GET {{host}}/api/me/engagements
+X-User-Id: {{budi}}
+
+###
+
+# --- Contractor: draft week (Budi / Acme, week of 2026-11-23) ----------
+
+GET {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23
+X-User-Id: {{budi}}
+
+###
+
+POST {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/entries
+X-User-Id: {{budi}}
+Content-Type: application/json
+
+{
+  "startUtc": "2026-11-24T01:00:00Z",
+  "endUtc": "2026-11-24T05:00:00Z",
+  "description": "Added from the .http file"
+}
+
+###
+
+# Replace {entryId} with an id from the week response.
+PUT {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/entries/{entryId}
+X-User-Id: {{budi}}
+Content-Type: application/json
+
+{
+  "startUtc": "2026-11-24T01:00:00Z",
+  "endUtc": "2026-11-24T03:00:00Z",
+  "description": "Edited from the .http file"
+}
+
+###
+
+DELETE {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/entries/{entryId}
+X-User-Id: {{budi}}
+
+###
+
+POST {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/submit
+X-User-Id: {{budi}}
+
+###
+
+# --- Client review ----------------------------------------------------
+
+GET {{host}}/api/clients/weeks?weekOf=2026-11-16
+X-User-Id: {{acme}}
+
+###
+
+POST {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/approve
+X-User-Id: {{acme}}
+
+###
+
+POST {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-23/reject
+X-User-Id: {{acme}}
+Content-Type: application/json
+
+{
+  "comment": "Please split design and coding tasks."
+}
+
+###
+
+# --- Invoices ---------------------------------------------------------
+
+POST {{host}}/api/clients/invoices
+X-User-Id: {{acme}}
+Content-Type: application/json
+
+{
+  "rangeStart": "2026-11-16",
+  "rangeEnd": "2026-11-30"
+}
+
+###
+
+GET {{host}}/api/clients/invoices
+X-User-Id: {{acme}}
+
+###
+
+# --- CSV exports ------------------------------------------------------
+
+# One row per entry, in the contractor's local time zone.
+GET {{host}}/api/engagements/{{acmeBudi}}/weeks/2026-11-16/entries/csv
+X-User-Id: {{budi}}
+
+###
+
+# Replace {invoiceId} with an id returned by POST /api/clients/invoices.
+GET {{host}}/api/clients/invoices/{invoiceId}/csv
+X-User-Id: {{acme}}
