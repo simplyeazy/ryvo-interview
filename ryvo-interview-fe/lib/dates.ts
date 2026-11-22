@@ -79,6 +79,14 @@ export function localDateOf(isoUtc: string, timeZone: string): string {
   }).format(new Date(isoUtc));
 }
 
+/**
+ * Today as seen in `timeZone`. The server's own date is not good enough: at
+ * 18:31 UTC it is still Sunday in UTC and already Monday in Jakarta.
+ */
+export function todayInZone(timeZone: string): string {
+  return localDateOf(new Date().toISOString(), timeZone);
+}
+
 /** UTC instant rendered as "Mon 16 Nov, 08:00" in the given zone. */
 export function formatDateTime(isoUtc: string, timeZone: string): string {
   return new Intl.DateTimeFormat("en-GB", {

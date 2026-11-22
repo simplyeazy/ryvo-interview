@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { apiFetch } from "@/lib/api";
-import { formatDate, formatHours, formatMoney } from "@/lib/dates";
+import { formatDate, formatHours, formatMoney, mondayOf, todayInZone } from "@/lib/dates";
 import { getSessionUser } from "@/lib/session";
 import type { Invoice } from "@/lib/types";
 import { NewInvoiceForm } from "./new-invoice-form";
@@ -69,7 +69,10 @@ async function InvoicesView() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <NewInvoiceForm />
+          <NewInvoiceForm
+            defaultStart={mondayOf(todayInZone(user.timeZoneId))}
+            defaultEnd={todayInZone(user.timeZoneId)}
+          />
         </CardContent>
       </Card>
 

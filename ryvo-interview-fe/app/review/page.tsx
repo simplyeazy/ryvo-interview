@@ -29,7 +29,7 @@ import {
   formatWeekdayShort,
   localDateOf,
   mondayOf,
-  todayIso,
+  todayInZone,
 } from "@/lib/dates";
 import { getSessionUser } from "@/lib/session";
 import type { Engagement, Week } from "@/lib/types";
@@ -58,14 +58,14 @@ async function ReviewView({ searchParams }: { searchParams: SearchParams }) {
     return <Forbidden message="Only clients review timesheets. Switch to Acme or Globex." />;
   }
 
-  const weekOf = single(params.week) ?? mondayOf(todayIso());
+  const thisWeek = mondayOf(todayInZone(user.timeZoneId));
+  const weekOf = single(params.week) ?? thisWeek;
   const [weeks, engagements] = await Promise.all([
     apiFetch<Week[]>(`/api/clients/weeks?weekOf=${weekOf}`, { userId: user.id }),
     apiFetch<Engagement[]>("/api/me/engagements", { userId: user.id }),
   ]);
 
   const engagementById = new Map(engagements.map((item) => [item.id, item]));
-  const thisWeek = mondayOf(todayIso());
 
   return (
     <div className="flex flex-col gap-6">

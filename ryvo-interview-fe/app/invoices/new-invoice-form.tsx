@@ -6,11 +6,15 @@ import { generateInvoice } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mondayOf, todayIso } from "@/lib/dates";
 
-export function NewInvoiceForm() {
+interface NewInvoiceFormProps {
+  /** Range defaults, computed in the client's time zone on the server. */
+  defaultStart: string;
+  defaultEnd: string;
+}
+
+export function NewInvoiceForm({ defaultStart, defaultEnd }: NewInvoiceFormProps) {
   const [state, formAction, pending] = useActionState(generateInvoice, {});
-  const today = todayIso();
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -22,12 +26,18 @@ export function NewInvoiceForm() {
             name="rangeStart"
             type="date"
             required
-            defaultValue={mondayOf(today)}
+            defaultValue={defaultStart}
           />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="rangeEnd">To</Label>
-          <Input id="rangeEnd" name="rangeEnd" type="date" required defaultValue={today} />
+          <Input
+            id="rangeEnd"
+            name="rangeEnd"
+            type="date"
+            required
+            defaultValue={defaultEnd}
+          />
         </div>
       </div>
 

@@ -38,7 +38,7 @@ import {
   formatWeekdayShort,
   localDateOf,
   mondayOf,
-  todayIso,
+  todayInZone,
 } from "@/lib/dates";
 import { getSessionUser } from "@/lib/session";
 import { isEditable, type Engagement, type Week } from "@/lib/types";
@@ -87,7 +87,9 @@ async function TimesheetsView({ searchParams }: { searchParams: SearchParams }) 
   const engagement =
     engagements.find((item) => item.id === requestedEngagement) ?? engagements[0];
 
-  const weekOf = single(params.week) ?? mondayOf(todayIso());
+  // The week is contractor-local, so "this week" must be their today, not UTC's.
+  const thisWeek = mondayOf(todayInZone(user.timeZoneId));
+  const weekOf = single(params.week) ?? thisWeek;
   const week = await apiFetch<Week>(
     `/api/engagements/${engagement.id}/weeks/${weekOf}`,
     { userId: user.id },
@@ -95,7 +97,6 @@ async function TimesheetsView({ searchParams }: { searchParams: SearchParams }) 
 
   const zone = week.contractorTimeZoneId;
   const editable = isEditable(week.status);
-  const thisWeek = mondayOf(todayIso());
   const query = (target: string) =>
     `/timesheets?engagement=${engagement.id}&week=${target}`;
 
