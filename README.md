@@ -17,6 +17,134 @@ dotnet test ../ryvo-interview-be.Tests
 The SQLite file (`ryvo.db`) is created from the initial migration on first run
 and seeded with dev users, engagements and timesheet weeks. Delete it to reset.
 
+# How to run the app
+
+Takes about two minutes. The database creates and seeds itself on first start —
+there is no SQLite install, no migration command and no `.env` file.
+
+## 1. Install Git
+
+```bash
+sudo apt update && sudo apt install -y git
+```
+
+## 2. Clone the repository
+
+```bash
+git clone https://github.com/simplyeazy/ryvo-interview.git
+cd ryvo-interview
+```
+
+Use `git@github.com:simplyeazy/ryvo-interview.git` only if you already have an
+SSH key registered with GitHub; HTTPS works without one.
+
+## 3. Install the .NET 10 SDK
+
+Ubuntu 24.04 and newer ship .NET 10 in the default repositories:
+
+```bash
+sudo apt update && sudo apt install -y dotnet-sdk-10.0
+dotnet --version        # expect 10.0.x
+```
+
+Snap alternative (needs the symlink and `DOTNET_ROOT`, or `dotnet` won't resolve):
+
+```bash
+sudo snap install dotnet-sdk-100
+sudo ln -s /snap/dotnet-sdk-100/current/usr/bin/dotnet /usr/local/bin/dotnet
+export DOTNET_ROOT=/snap/dotnet-sdk-100/current/usr/lib/dotnet
+```
+
+## 4. Install Node.js 20.9 or newer
+
+Download the LTS installer from <https://nodejs.org/en/download>, or:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version          # v20.9+ or newer
+```
+
+## 5. Install the frontend dependencies
+
+```bash
+cd ryvo-interview-fe
+npm ci
+```
+
+`node_modules` is not in the repository, so this step is required once after cloning.
+
+## 6. Start the API
+
+In one terminal:
+
+```bash
+cd ryvo-interview-be
+dotnet run
+```
+
+The first run applies the migration, seeds the demo data and creates
+`ryvo-interview-be/ryvo.db`. You should see:
+
+```
+Applying migration '20261121143737_InitialCreate'.
+SQLite ready: 4 users, 3 engagements, 4 weeks.
+Now listening on: http://localhost:5098
+```
+
+Swagger UI: <http://localhost:5098/swagger>
+
+## 7. Start the web app
+
+In a second terminal:
+
+```bash
+cd ryvo-interview-fe
+npm run dev
+```
+
+Open <http://localhost:3000> and pick a user on the first screen.
+
+## What to look at
+
+| User | Role | Where |
+|---|---|---|
+| Budi Santoso | Contractor (Asia/Jakarta) | `/timesheets` — add/delete entries, 12 h daily cap, submit a week |
+| Acme Corp | Client | `/review` — approve or reject with a comment; `/invoices` — generate and download CSV |
+| Siti Rahma | Contractor | second engagement, shows per-contractor isolation |
+| Globex Inc | Client | sees only its own contractor and invoices |
+
+There is no password prompt: login is a dev-only user switcher, because the
+exercise is about permission checks. Try adding an entry as Acme — it is rejected
+server-side, not just hidden in the UI.
+
+## Troubleshooting
+
+- **Ports 5098 / 3000 must be free.** If the API prints `Address already in use`,
+  stop whatever is on the port or run `dotnet run --urls http://localhost:5099`
+  and start the web app with `RYVO_API_URL=http://localhost:5099 npm run dev`.
+- **Reset the demo data:** stop the API and delete `ryvo-interview-be/ryvo.db*`; the
+  next `dotnet run` recreates and reseeds it.
+- **`dotnet: command not found` after the snap install:** the symlink and
+  `DOTNET_ROOT` from step 3 are missing.
+- **Windows:** run everything inside WSL2, not PowerShell.
+
+# What am I building
+## Must haves:
+- daily time entries with validation: end after start, no overlapping entries and 12 hour daily cap.
+- a weekly views with totals. Submitting a week lock its entries
+- Clients can approve a submitted week by contractors or reject with a comment.
+- An invoice for one client and date range: approved hours x hourly rate in USD downloadable as CSV
+- Test for the money and time logic.
+- Login can be dev only user switcher
+
+Login can be a dev-only user switcher, since we're testing permission checks, not password storage. Contractors can't edit other people's entries, and clients can only approve their own contractors' weeks. Enforce both on the server.
+
+# Timezones
+- Store entries in UTC
+- Show contractor's days in Asia/Jakarta
+- Show client's days in their own time zone e.g. America/New_York.
+
 # AI usage in this interview
 - Minimal API and Swagger bootstrapping
 - Edge cases in unit test
@@ -25,13 +153,50 @@ and seeded with dev users, engagements and timesheet weeks. Delete it to reset.
 - Set git .gitignore, making sure no credentials, .envs and setting line endings CLRF / LF issue for linux and windows box
 - Bootstrapping the FE using nextjs app router with shadcn
 
+# Week boundary
+- Contractor's timezone define the week boundary. `ContractorTimezoneId` captured on the week and used for boundary, daily cap and daily totals.
+
+```csharp
+ContractorTimeZoneId = contractor.TimeZoneId;
+Boundary = new WeekBoundary(anyDateInWeek, contractor.GetTimeZone());
+```
+
+Why contractor, not the client
+
+1. <b>Its the unit contractor submit</b>. They type wall clock times in their own day. If the week followed the client's zone, a Jakarta contractor's Monday moring would land in the client's sunday and the week they fill in would not match the days they actually worked in.
+2. <b>The 12h/day cap is about the person's calender day.</b> It must reset at their midnight. Tying it to the client will break the cap boundary whenever say client timezone or daylight saving shifted while contractor day stays still.  
+`TimeZoneInfo.FindSystemTimeZoneById(ContractorTimeZoneId)` in `ValidateEntryRules`
+3. <b>Determinism after persistence.</b> The zone is stored on the week row, rebuilding the aggregate from SQLite recomputes the indentical boundary even if the server runs in another zone or the contractor later edit their profile. The unique key is `engagementId, Weekstartlocal` 
+
+# Not done
+- an admin role
+- password reset or email flows
+- Docker (no more SQLlite, just docker compose and it runs)
+- live updates and charts
 ---
+
+# Why I designed the project this way
+## Why .NET Core ASP Web API instead of Nextjs with Server actions and Prism ORM
+
+I'm more comfortable with C# instead of Typescript or Javascript. Typescript supports domain modelling too, I'm just not comfortable working with it in a time constrainded manner
+
+## Why I designed the app structure this way
+
+I tend to separate frontend project and backend project under a root directory instead of putting them all under one /src folder because this give me the easiest way to take a look at the front end. Why monorepo? simpler. Its a small app with me as developer. Setting up multiple repo just add another friction in development because we have to tend 2 repo for one project.
+
+### Why Domain first
+
+I develop domain first because this is where business rule exist. This is where I make sure each entities, each aggregates acts the way they should act and can test its behaviour. This way, AI agent can accelerate development by reading how the domain is and adjust generated code for the front end from the business rule.
+
+## Why SQLite
+
+SQLite does not require complicated setup like MSSQL, MariaDB, PostgreSQL thus eliminating friction for infra dependency. By using EF Core with `Microsoft.EntityFrameworkCore.SQlite` its already bundled. SQLite does come with quirks and we have to "trick" it because it does not support `DateTime`, `DateTimeOffset` it treats it either as `TEXT`, `INTEGER` or `REAL`.
 
 ## The weird trick: making EF Core "support" `DateTimeOffset` on SQLite
 
 SQLite has no date/time type at all, and EF Core's SQLite provider will not
 translate a `DateTimeOffset` into SQL for ordering, comparison or aggregation.
-This is not a soft warning — it throws when the query is compiled:
+It will throws when the query is compiled:
 
 ```
 System.NotSupportedException: SQLite does not support expressions of type
